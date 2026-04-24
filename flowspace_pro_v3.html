@@ -80,6 +80,31 @@
       color: white; border-radius: 60px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
     }
     
+    /* Botão Voltar ao Topo */
+.btn-to-top {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: rgba(79, 156, 247, 0.2);
+  border: 1px solid rgba(79, 156, 247, 0.4);
+  color: #fff;
+  display: none; /* Invisível inicialmente */
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 999;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.btn-to-top:hover {
+  background: rgba(79, 156, 247, 0.4);
+  transform: translateY(-5px);
+}
+
     .header-controls { display: flex; gap: 10px; margin-left: auto; align-items: center; flex-wrap: wrap; }
 
     /* ==========================================================================
@@ -273,6 +298,10 @@
 
   <div class="container" id="app"></div>
 
+<button id="scrollToTop" class="btn-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+  <i class="fas fa-chevron-up"></i>
+</button>
+
   <div id="notification-popup">
     <strong style="color: white;"><i class="fas fa-bell"></i> FlowSpace Pro</strong>
     <p id="notif-text" style="color: #bbd4ff; margin-top: 5px;"></p>
@@ -331,6 +360,36 @@
       // Instâncias do Chart.js
       let lineChartInstance = null;
       let doughnutChartInstance = null;
+
+// Função para rolar até o dia atual
+window.jumpToToday = function() {
+  const now = new Date();
+  const todayIndex = now.getDay(); // 0 (Dom) a 6 (Sáb)
+  
+  // Só executa o scroll se estivermos visualizando o mês e semana atuais
+  const realMonth = new Date().getMonth();
+  if (currentMonth === realMonth) {
+    const element = document.getElementById(`day-container-${todayIndex}`);
+    if (element) {
+      setTimeout(() => {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Efeito visual de destaque opcional
+        element.style.borderColor = '#6affe8';
+        setTimeout(() => { element.style.borderColor = 'rgba(79,156,247,0.2)'; }, 2000);
+      }, 500);
+    }
+  }
+};
+
+// Monitora o scroll para mostrar/esconder o botão de subir
+window.addEventListener('scroll', () => {
+  const btn = document.getElementById('scrollToTop');
+  if (window.scrollY > 400) {
+    btn.style.display = 'flex';
+  } else {
+    btn.style.display = 'none';
+  }
+});
 
       // ==========================================================================
       // UTILITÁRIOS DE SEGURANÇA E HIGIENIZAÇÃO
@@ -732,6 +791,7 @@ window.replicateTaskToWeek = function(dIdx, tIdx) {
 
           const div = document.createElement('div');
           div.className = 'day';
+          div.id = `day-container-${i}`;
           div.innerHTML = `
             <h3><i class="far fa-calendar-alt"></i> ${daysLabel[i]} 
               <span class="day-date">${target.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'})}</span>
@@ -954,6 +1014,7 @@ window.replicateTaskToWeek = function(dIdx, tIdx) {
       applyFocusMode();
       createUI();
       checkNotificationUI();
+      jumpToToday();
  // Mostra botão de permissão se necessário
 
     })();
