@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>FlowSpace Pro • Produtividade Executiva</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    /* ==========================================================================
+       CSS BASE & VARIÁVEIS GLOBAIS
+       ========================================================================== */
+    * { box-sizing: border-box; margin: 0; }
+    
+    body { 
+      margin: 0; 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      background: #05070a; 
+      color: #eef2fb; 
+      min-height: 100vh; 
+      position: relative; 
+      overflow-x: hidden; 
+      transition: background 0.5s ease;
+    }
+
+    /* ==========================================================================
+       MODO FOCO
+       ========================================================================== */
+    body.focus-mode .animated-bg {
+      background: radial-gradient(ellipse at 50% 50%, #0a0f1a, #020304) !important;
+      animation: none !important;
+    }
+    body.focus-mode .particles { opacity: 0 !important; transition: opacity 0.6s; }
+    body.focus-mode .dashboard,
+    body.focus-mode .agenda-section,
+    body.focus-mode .week-nav { 
+      display: none !important; 
+    }
+    body.focus-mode header {
+      border-color: rgba(255, 120, 80, 0.5) !important;
+      background: rgba(30, 10, 5, 0.85) !important;
+    }
+    body.focus-mode .focus-banner { display: flex !important; }
+    body.focus-mode .day { border-color: rgba(255, 120, 80, 0.25) !important; }
+
+    .focus-banner {
+      display: none; align-items: center; justify-content: center; gap: 10px;
+      margin: 0 24px 16px 24px; padding: 12px 24px;
+      background: rgba(255, 80, 50, 0.08); border: 1px solid rgba(255, 100, 60, 0.35);
+      border-radius: 60px; color: #ff9070; font-size: 0.9rem; font-weight: 600;
+      letter-spacing: 0.04em; animation: pulseBanner 2.5s ease infinite;
+    }
+    @keyframes pulseBanner {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255,80,50,0.0); }
+      50% { box-shadow: 0 0 18px 2px rgba(255,80,50,0.18); }
+    }
+
+    /* ==========================================================================
+       BOTÕES E COMPONENTES
+       ========================================================================== */
+    .btn-focus, .btn-dashboard, .btn-notify {
+      padding: 8px 16px; border-radius: 40px; font-size: 0.8rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; gap: 7px;
+      transition: all 0.25s; letter-spacing: 0.03em;
+    }
+    .btn-focus {
+      margin-left: auto; background: rgba(255, 100, 60, 0.12);
+      border: 1px solid rgba(255, 100, 60, 0.4); color: #ff9070;
+    }
+    .btn-focus:hover { background: rgba(255,100,60,0.22); transform: scale(1.03); }
+    body.focus-mode .btn-focus { background: rgba(255, 100, 60, 0.28); border-color: rgba(255, 100, 60, 0.7); color: #ffb090; }
+
+    .btn-dashboard { background: rgba(106, 175, 232, 0.15); border: 1px solid rgba(106, 175, 232, 0.5); color: #c8deff; }
+    .btn-dashboard:hover { background: rgba(106, 175, 232, 0.3); }
+
+    .btn-notify { background: rgba(80, 200, 120, 0.15); border: 1px solid rgba(80, 200, 120, 0.4); color: #66dd99; display: none; }
+    
+    .btn-primary { 
+      padding: 10px 24px; background: linear-gradient(145deg, #1f8b4c, #0e6b3e); border: none; 
+      color: white; border-radius: 60px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    }
+    
+    .header-controls { display: flex; gap: 10px; margin-left: auto; align-items: center; flex-wrap: wrap; }
+
+    /* ==========================================================================
+       PROGRESSO E TAREFAS
+       ========================================================================== */
+    .progress-wrap { margin: 0 0 14px 0; }
+    .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; font-size: 0.78rem; color: #7eaadd; }
+    .progress-header .pct-label { font-weight: 700; font-size: 0.85rem; color: #a0d4ff; }
+    .progress-track { width: 100%; height: 7px; background: rgba(255,255,255,0.07); border-radius: 99px; overflow: hidden; border: 1px solid rgba(79,156,247,0.15); }
+    .progress-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #4f9cf7, #6affe8); transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); position: relative; }
+    .progress-fill::after { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 18px; background: rgba(255,255,255,0.35); border-radius: 99px; filter: blur(3px); }
+    .progress-fill.done { background: linear-gradient(90deg, #1f8b4c, #6affe8); }
+
+    .priority-badge { font-size: 0.65rem; font-weight: 700; padding: 2px 9px; border-radius: 20px; white-space: nowrap; margin-left: 6px; letter-spacing: 0.04em; }
+    .priority-alta  { background: rgba(255, 70, 70, 0.18); color: #ff7777; border: 1px solid rgba(255,70,70,0.3); }
+    .priority-media { background: rgba(255, 190, 50, 0.15); color: #ffcc55; border: 1px solid rgba(255,190,50,0.3); }
+    .priority-baixa { background: rgba(80, 200, 120, 0.15); color: #66dd99; border: 1px solid rgba(80,200,120,0.3); }
+
+    select.priority-select { background: rgba(10, 18, 28, 0.85); border: 1px solid rgba(79, 156, 247, 0.25); color: #c8deff; border-radius: 20px; padding: 4px 8px; font-size: 0.72rem; cursor: pointer; outline: none; }
+
+    .btn-delete-task {
+      background: transparent; border: none; color: rgba(255, 90, 90, 0.45); cursor: pointer;
+      font-size: 0.78rem; padding: 4px 6px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; transition: color 0.2s, transform 0.2s, background 0.2s; flex-shrink: 0;
+    }
+    .btn-delete-task:hover { color: #ff5e5e; background: rgba(255, 80, 80, 0.12); transform: scale(1.2); }
+
+    /* Estilo para botão de recorrência */
+    .btn-recurring {
+      background: transparent; border: 1px solid rgba(79,156,247,0.3); color: rgba(79,156,247,0.5);
+      border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.3s;
+    }
+    .btn-recurring.active { background: rgba(79,156,247,0.2); color: #6affe8; border-color: #6affe8; box-shadow: 0 0 10px rgba(106, 255, 232, 0.2); }
+
+    /* ==========================================================================
+       LAYOUT BASE E EFEITOS
+       ========================================================================== */
+    .animated-bg { 
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; 
+      background: radial-gradient(ellipse at 30% 40%, #13203a, #020304); 
+      background-size: 200% 200%; animation: bgFlow 18s ease infinite; 
+    }
+    @keyframes bgFlow { 0% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } 100% { background-position: 0% 0%; } }
+    .particles { 
+      position: fixed; width: 100%; height: 100%; z-index: -1; 
+      background-image: radial-gradient(2px 2px at 20% 40%, rgba(100, 210, 255, 0.3), transparent), radial-gradient(2px 2px at 80% 70%, rgba(180, 140, 255, 0.2), transparent), radial-gradient(3px 3px at 40% 80%, rgba(80, 200, 120, 0.2), transparent);
+      background-size: 200px 200px; animation: drift 40s linear infinite; opacity: 0.5; transition: opacity 0.6s;
+    }
+    @keyframes drift { 0% { transform: translate(0,0); } 100% { transform: translate(-200px,-100px); } }
+    
+    .glass-panel { 
+      backdrop-filter: blur(16px) saturate(180%); background: rgba(10,18,28,0.55); 
+      border: 1px solid rgba(79,156,247,0.2); border-radius: 28px; box-shadow: 0 20px 40px -12px rgba(0,0,0,0.4); 
+    }
+    
+    header { 
+      padding: 16px 28px; margin: 20px 24px 16px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      border-radius: 80px; background: rgba(6,14,24,0.7); border: 1px solid rgba(79,156,247,0.3); transition: border-color 0.5s, background 0.5s;
+    }
+    header h2 { font-weight: 700; font-size: 1.5rem; background: linear-gradient(135deg, #ffffff, #b8d4ff, #6aafe8); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    
+    .datetime-display { padding: 8px 20px; background: rgba(79,156,247,0.1); border-radius: 40px; font-size: 0.85rem; color: #bbd4ff; border: 1px solid rgba(79,156,247,0.25); }
+    
+    .dashboard { padding: 24px 26px; margin: 8px 24px 20px 24px; }
+    .filters { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
+    .select-custom { padding: 10px 20px; border-radius: 60px; background: rgba(18,28,40,0.8); border: 1px solid rgba(79,156,247,0.3); color: #f0f6ff; cursor: pointer; outline: none; }
+    
+    canvas { background: rgba(0,0,0,0.2); border-radius: 24px; padding: 12px; border: 1px solid rgba(79,156,247,0.2); width: 100%; max-height: 320px; }
+    
+    .week-nav { display: flex; justify-content: space-between; align-items: center; margin: 16px 24px; padding: 16px 24px; background: rgba(79,156,247,0.08); border-radius: 60px; border: 1px solid rgba(79,156,247,0.25); }
+    .container { padding: 8px 24px 40px 24px; display: flex; flex-direction: column; gap: 20px; }
+    
+    .day { background: rgba(16,26,40,0.5); border: 1px solid rgba(79,156,247,0.2); border-radius: 28px; padding: 22px 24px; transition: border-color 0.5s; }
+    .day h3 { font-size: 1.4rem; display: flex; align-items: center; color: #dfebff; border-bottom: 1px solid rgba(79,156,247,0.3); padding-bottom: 10px; margin-bottom: 18px; }
+    .day-date { font-size: 0.8rem; color: #4f9cf7; margin-left: auto; background: rgba(79,156,247,0.15); padding: 4px 12px; border-radius: 40px; }
+    
+    .task { display: flex; align-items: center; background: rgba(0,0,0,0.2); padding: 8px 14px; border-radius: 60px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+    .task input[type="text"] { background: transparent; border: none; color: #f0f7ff; width: 100%; padding: 8px 6px; outline: none; transition: all 0.3s ease; flex: 1; min-width: 150px; }
+    .task input[type="text"].done-text { text-decoration: line-through; opacity: 0.5; }
+    
+    .add-task-area { margin-top: 20px; display: flex; gap: 12px; border-top: 1px solid rgba(79,156,247,0.2); padding-top: 20px; flex-wrap: wrap; align-items: center; }
+    .add-task-area input[type="text"] { background: rgba(0,10,20,0.6); border: 1px solid rgba(79,156,247,0.3); border-radius: 60px; padding: 12px 18px; color: #fff; flex: 2; min-width: 200px; }
+    
+    .timer-control { display: flex; align-items: center; gap: 10px; margin: 10px 0; padding: 10px; background: rgba(79,156,247,0.05); border-radius: 15px; font-size: 0.9rem; flex-wrap: wrap; }
+    .timer-display { font-family: 'Courier New', monospace; font-weight: bold; color: #6aafe8; min-width: 50px; }
+    .btn-timer { padding: 5px 12px; font-size: 0.75rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(79,156,247,0.3); color: white; border-radius: 20px; cursor: pointer; transition: all 0.2s; }
+    .btn-timer:hover { background: rgba(79,156,247,0.2); }
+    .btn-reset { background: transparent; border: none; color: #ff5e5e; cursor: pointer; font-size: 0.8rem; padding: 5px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: transform 0.3s; }
+    .btn-reset:hover { transform: rotate(-90deg); color: #ff3333; }
+    
+    /* ==========================================================================
+       MÓDULO DE AGENDA
+       ========================================================================== */
+    .agenda-section { margin: 20px 24px; padding: 24px 28px; }
+    .agenda-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
+    .agenda-item { background: rgba(255,255,255,0.04); padding: 14px; border-radius: 20px; border: 1px solid rgba(79,156,247,0.15); display: flex; flex-direction: column; gap: 10px; position: relative; }
+    .agenda-item textarea { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px 14px; border-radius: 16px; resize: vertical; min-height: 80px; font-family: inherit; font-size: 0.9rem; }
+    .agenda-item input[type="time"] { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #c8deff; padding: 8px 12px; border-radius: 12px; width: 100%; outline: none;}
+    .agenda-item-header { display: flex; justify-content: space-between; align-items: center; }
+    
+    #notification-popup { position: fixed; bottom: 24px; right: 24px; background: #1e3a5f; border-left: 5px solid #4f9cf7; padding: 18px 26px; border-radius: 20px; display: none; z-index: 9999; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+
+    /* ==========================================================================
+       MÓDULO: DASHBOARD PROFISSIONAL LATERAL
+       ========================================================================== */
+    .dashboard-panel {
+      position: fixed; top: 0; right: -100%; width: 400px; max-width: 100vw; height: 100vh;
+      background: rgba(10, 18, 28, 0.95); backdrop-filter: blur(20px); border-left: 1px solid rgba(79,156,247,0.3);
+      z-index: 10000; transition: right 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+      padding: 30px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto;
+      box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+    }
+    .dashboard-panel.open { right: 0; }
+    .dashboard-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(79,156,247,0.2); padding-bottom: 15px; }
+    .dashboard-header h2 { font-size: 1.5rem; color: #fff; display: flex; align-items: center; gap: 10px; }
+    .btn-close-dash { background: transparent; border: none; color: #ff5e5e; font-size: 1.5rem; cursor: pointer; transition: transform 0.3s; }
+    .btn-close-dash:hover { transform: scale(1.1); }
+    
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .stat-card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 16px; border: 1px solid rgba(79,156,247,0.15); text-align: center; }
+    .stat-value { font-size: 1.8rem; font-weight: bold; color: #6affe8; margin-top: 5px; }
+    .stat-label { font-size: 0.8rem; color: #a0c8ff; text-transform: uppercase; letter-spacing: 1px; }
+    
+    .chart-container-pro { margin-top: 20px; background: rgba(0,0,0,0.2); border-radius: 20px; padding: 15px; border: 1px solid rgba(79,156,247,0.15); }
+
+    @media (max-width: 600px) {
+      .header-controls { margin-left: 0; width: 100%; justify-content: space-between; }
+      header { flex-direction: column; align-items: flex-start; border-radius: 30px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="animated-bg"></div>
+  <div class="particles"></div>
+
+  <header class="glass-panel">
+    <div style="display:flex; align-items: center; gap: 12px;">
+      <i class="fas fa-bolt" style="color: #4f9cf7; font-size: 1.5rem;"></i>
+      <h2>FlowSpace Pro</h2>
+    </div>
+    <div id="real-time" class="datetime-display">Carregando...</div>
+    
+    <div class="header-controls">
+      <button class="btn-notify" id="btn-notify-perm" onclick="requestNotificationPermission()">
+        <i class="fas fa-bell"></i> Ativar Alertas
+      </button>
+
+      <button class="btn-dashboard" onclick="toggleDashboard()">
+        <i class="fas fa-chart-pie"></i> Dashboard
+      </button>
+
+      <button class="btn-focus" id="btn-focus-toggle" onclick="toggleFocusMode()">
+        <i class="fas fa-moon"></i> Modo Foco
+      </button>
+    </div>
+  </header>
+
+  <div class="focus-banner" id="focus-banner">
+    <i class="fas fa-fire"></i> MODO FOCO ATIVO — Mantenha o fluxo. Elimine as distrações.
+  </div>
+
+  <div class="dashboard glass-panel">
+    <div class="filters">
+      <select id="filterMonth" class="select-custom"></select>
+      <select id="filterCategory" class="select-custom"></select>
+      <button class="btn-primary" onclick="manageCategories()" style="background: rgba(79,156,247,0.1); border: 1px solid rgba(79,156,247,0.3);">
+        <i class="fas fa-tags"></i> Categorias
+      </button>
+    </div>
+    <canvas id="chart"></canvas>
+  </div>
+
+  <div class="week-nav glass-panel">
+    <button class="btn-primary" style="background: rgba(79,156,247,0.15);" onclick="changeWeek(-1)">
+      <i class="fas fa-chevron-left"></i> Anterior
+    </button>
+    <span id="current-week-label" style="font-weight: 600; color: #a0c8ff;"></span>
+    <button class="btn-primary" onclick="changeWeek(1)">
+      Próxima <i class="fas fa-chevron-right"></i>
+    </button>
+  </div>
+
+  <div class="agenda-section glass-panel">
+    <h3><i class="fas fa-clock"></i> Agenda & Lembretes</h3>
+    <div id="agenda-container" class="agenda-grid"></div>
+    <button class="btn-primary" style="margin-top:15px;" onclick="addAgendaItem()">
+      <i class="fas fa-plus"></i> Novo Lembrete
+    </button>
+  </div>
+
+  <div class="container" id="app"></div>
+
+  <div id="notification-popup">
+    <strong style="color: white;"><i class="fas fa-bell"></i> FlowSpace Pro</strong>
+    <p id="notif-text" style="color: #bbd4ff; margin-top: 5px;"></p>
+    <button onclick="this.parentElement.style.display='none'" style="margin-top:10px; background:transparent; border: 1px solid #4f9cf7; color: white; padding: 5px 15px; border-radius: 20px; cursor: pointer;">Fechar</button>
+  </div>
+
+  <div id="pro-dashboard" class="dashboard-panel">
+    <div class="dashboard-header">
+      <h2><i class="fas fa-chart-line"></i> Desempenho</h2>
+      <button class="btn-close-dash" onclick="toggleDashboard()"><i class="fas fa-times"></i></button>
+    </div>
+    
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Tarefas Criadas</div>
+        <div class="stat-value" id="stat-total">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Concluídas</div>
+        <div class="stat-value" id="stat-done" style="color: #66dd99;">0</div>
+      </div>
+      <div class="stat-card" style="grid-column: span 2;">
+        <div class="stat-label">Taxa de Produtividade Global</div>
+        <div class="stat-value" id="stat-pct" style="font-size: 2.2rem;">0%</div>
+      </div>
+    </div>
+
+    <div class="chart-container-pro">
+      <canvas id="pro-doughnut-chart"></canvas>
+    </div>
+    
+    <p style="font-size:0.8rem; color:#7eaadd; text-align:center; margin-top: 10px;">Os dados refletem o histórico global armazenado localmente.</p>
+  </div>
+
+  <script>
+    (function(){
+      "use strict";
+
+      // ==========================================================================
+      // ESTADO GERAL
+      // ==========================================================================
+      const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+      const daysLabel = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+      
+      let db = {}; 
+      let categories = ["Estudo", "Profissional", "Saúde"];
+      let currentMonth = new Date().getMonth(); // Atualizado dinamicamente
+      let currentWeek = 0;
+      let agendaItems = [];
+      let activeTimers = {};
+      let focusMode = false;
+      
+      // Armazena temporariamente estado visual do botão "recorrente" ao adicionar
+      let tempRecurringFlags = [false, false, false, false, false, false, false];
+
+      // Instâncias do Chart.js
+      let lineChartInstance = null;
+      let doughnutChartInstance = null;
+
+      // ==========================================================================
+      // UTILITÁRIOS DE SEGURANÇA E HIGIENIZAÇÃO
+      // ==========================================================================
+      function escapeHTML(str) {
+        if (typeof str !== 'string') return str;
+        return str.replace(/[&<>'"]/g, tag => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        }[tag]));
+      }
+
+      // ==========================================================================
+      // PERSISTÊNCIA (COM TRATAMENTO DE ERRO)
+      // ==========================================================================
+      function saveData() {
+        try {
+          const payload = {
+            db: db,
+            categories: categories,
+            lastView: { month: currentMonth, week: currentWeek },
+            agenda: agendaItems,
+            focusMode: focusMode
+          };
+          localStorage.setItem('flowspace_pro_data', JSON.stringify(payload));
+        } catch (e) {
+          console.error("Erro ao salvar dados no LocalStorage:", e);
+        }
+      }
+
+      function loadData() {
+        try {
+          const raw = localStorage.getItem('flowspace_pro_data');
+          if (raw) {
+            const data = JSON.parse(raw);
+            db = data.db || {};
+            categories = data.categories || ["Estudo", "Profissional", "Saúde"];
+            currentMonth = data.lastView?.month ?? new Date().getMonth();
+            currentWeek = data.lastView?.week ?? 0;
+            agendaItems = data.agenda || [];
+            focusMode = data.focusMode || false;
+          }
+        } catch (e) {
+          console.error("Erro ao ler dados do LocalStorage, iniciando limpo:", e);
+        }
+      }
+
+      // ==========================================================================
+      // LÓGICA DE CALENDÁRIO E RECORRÊNCIA
+      // ==========================================================================
+      function getWeeksInMonth(year, month) {
+        const firstDay = new Date(year, month, 1).getDay();
+        const lastDate = new Date(year, month + 1, 0).getDate();
+        return Math.ceil((lastDate + firstDay) / 7);
+      }
+
+      function initDB(mIdx) {
+        if (!db[mIdx]) db[mIdx] = {};
+        const weeks = getWeeksInMonth(2026, mIdx);
+        for(let w = 0; w < weeks; w++) {
+          if (!db[mIdx][w]) {
+            db[mIdx][w] = daysLabel.map(() => []);
+          }
+        }
+        saveData();
+      }
+
+      function applyRecurringTasks(targetM, targetW) {
+        let prevM = targetM;
+        let prevW = targetW - 1;
+        
+        if (prevW < 0) {
+          prevM--;
+          if (prevM < 0) return; // Não retrocede ano neste escopo
+          prevW = getWeeksInMonth(2026, prevM) - 1;
+        }
+
+        // Garante que o mês anterior exista antes de consultar
+        if (!db[prevM]) initDB(prevM);
+        if (!db[prevM][prevW]) return;
+
+        for (let d = 0; d < 7; d++) {
+          const pastTasks = db[prevM][prevW][d] || [];
+          const currentTasks = db[targetM][targetW][d] || [];
+          
+          pastTasks.forEach(pt => {
+            if (pt.recurring) {
+              // Evita duplicar se já existir uma com o mesmo nome no dia alvo
+              const alreadyExists = currentTasks.some(ct => ct.name === pt.name);
+              if (!alreadyExists) {
+                currentTasks.push({
+                  name: pt.name, cat: pt.cat, priority: pt.priority, 
+                  done: false, recurring: true 
+                });
+              }
+            }
+          });
+        }
+      }
+
+      // ==========================================================================
+      // MODO FOCO
+      // ==========================================================================
+      window.toggleFocusMode = function() {
+        focusMode = !focusMode;
+        applyFocusMode();
+        saveData();
+      };
+
+      function applyFocusMode() {
+        const body = document.body;
+        const btn  = document.getElementById('btn-focus-toggle');
+        const banner = document.getElementById('focus-banner');
+        if (focusMode) {
+          body.classList.add('focus-mode');
+          btn.innerHTML  = '<i class="fas fa-sun"></i> Sair do Foco';
+          banner.style.display = 'flex';
+        } else {
+          body.classList.remove('focus-mode');
+          btn.innerHTML  = '<i class="fas fa-moon"></i> Modo Foco';
+          banner.style.display = 'none';
+        }
+      }
+
+      // ==========================================================================
+      // TIMERS E NOTIFICAÇÕES (NATIVA + FALLBACK)
+      // ==========================================================================
+      window.requestNotificationPermission = function() {
+        if ("Notification" in window) {
+          Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+              document.getElementById('btn-notify-perm').style.display = 'none';
+              new Notification("FlowSpace Pro", { body: "Notificações ativadas com sucesso!", icon: "https://cdn-icons-png.flaticon.com/512/3254/3254124.png" });
+            }
+          });
+        }
+      };
+
+      function checkNotificationUI() {
+        if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+          document.getElementById('btn-notify-perm').style.display = 'flex';
+        }
+      }
+
+      function showNotification(text) {
+        // Nativa
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification("FlowSpace Pro", { body: text });
+        }
+        // Fallback visual interno
+        document.getElementById('notif-text').textContent = text;
+        document.getElementById('notification-popup').style.display = 'block';
+        
+        // Auto-fechar popup interno após 8s
+        setTimeout(() => { document.getElementById('notification-popup').style.display = 'none'; }, 8000);
+      }
+
+      window.startRestTimer = function(dayIdx, minutes) {
+        if (activeTimers[dayIdx]) clearInterval(activeTimers[dayIdx].interval);
+        let seconds = minutes * 60;
+        const display = document.getElementById(`timer-val-${dayIdx}`);
+        activeTimers[dayIdx] = {
+          interval: setInterval(() => {
+            seconds--;
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            display.textContent = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+            if (seconds <= 0) {
+              clearInterval(activeTimers[dayIdx].interval);
+              display.textContent = "00:00";
+              showNotification(`O descanso de ${minutes} min acabou! Hora de voltar ao fluxo.`);
+              delete activeTimers[dayIdx];
+            }
+          }, 1000)
+        };
+      };
+
+      window.resetRestTimer = function(dayIdx) {
+        if (activeTimers[dayIdx]) {
+          clearInterval(activeTimers[dayIdx].interval);
+          delete activeTimers[dayIdx];
+        }
+        const display = document.getElementById(`timer-val-${dayIdx}`);
+        if(display) display.textContent = "00:00";
+      };
+
+      // ==========================================================================
+      // GESTÃO DE CATEGORIAS
+      // ==========================================================================
+      window.manageCategories = function() {
+        const action = prompt("Escolha: (1) Adicionar (2) Excluir").trim();
+        if (action === "1") {
+          const n = prompt("Nova categoria:");
+          if (n && !categories.includes(n)) { categories.push(escapeHTML(n)); renderCategorySelectors(); }
+        } else if (action === "2") {
+          const d = prompt("Excluir qual?\n" + categories.join(", "));
+          if (categories.includes(d)) { 
+            if(confirm(`Tem certeza que deseja excluir "${d}"?`)) {
+              categories = categories.filter(c => c !== d); 
+              renderCategorySelectors(); 
+            }
+          }
+        }
+        saveData();
+      };
+
+      function renderCategorySelectors() {
+        const filterCat = document.getElementById('filterCategory');
+        const saved = filterCat.value;
+        filterCat.innerHTML = `<option value="all">🏷️ Todas categorias</option>` + 
+          categories.map(c => `<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`).join('');
+        filterCat.value = categories.includes(saved) ? saved : "all";
+        createUI();
+      }
+
+//FUNÇÃO DE REPLICAÇÃO 
+window.replicateTaskToWeek = function(dIdx, tIdx) {
+  const taskToCopy = db[currentMonth][currentWeek][dIdx][tIdx];
+  
+  if (!confirm(`Deseja copiar a tarefa "${taskToCopy.name}" para todos os outros dias desta semana?`)) return;
+
+  // Percorre os 7 dias da semana atual
+  for (let d = 0; d < 7; d++) {
+    if (d === dIdx) continue; // Pula o dia de origem
+
+    const dayTasks = db[currentMonth][currentWeek][d];
+    
+    // Verifica se já existe uma tarefa com o mesmo nome para evitar duplicados
+    const alreadyExists = dayTasks.some(t => t.name === taskToCopy.name);
+    
+    if (!alreadyExists) {
+      dayTasks.push({
+        ...taskToCopy,
+        done: false // A cópia começa como pendente
+      });
+    }
+  }
+
+  createUI();
+  saveData();
+  showNotification("Rotina aplicada a toda a semana!");
+};
+      // ==========================================================================
+      // NAVEGAÇÃO E TAREFAS
+      // ==========================================================================
+            window.changeWeek = function(dir) {
+        const weeks = getWeeksInMonth(2026, currentMonth);
+        let nW = currentWeek + dir;
+        
+        if (nW >= weeks) { if (currentMonth < 11) { currentMonth++; currentWeek = 0; } }
+        else if (nW < 0) { if (currentMonth > 0) { currentMonth--; currentWeek = getWeeksInMonth(2026, currentMonth) - 1; } }
+        else { currentWeek = nW; }
+        
+        initDB(currentMonth);
+        
+        // CORREÇÃO: Puxa as tarefas recorrentes dinamicamente ao mudar de semana
+        applyRecurringTasks(currentMonth, currentWeek);
+        
+        document.getElementById('filterMonth').value = currentMonth;
+        tempRecurringFlags = [false, false, false, false, false, false, false]; // reseta flags visuais
+        createUI();
+        saveData();
+      };
+
+      window.toggleRecurringFlag = function(dayIdx) {
+        tempRecurringFlags[dayIdx] = !tempRecurringFlags[dayIdx];
+        const btn = document.getElementById(`btn-rec-${dayIdx}`);
+        if (btn) {
+          if (tempRecurringFlags[dayIdx]) btn.classList.add('active');
+          else btn.classList.remove('active');
+        }
+      };
+
+      window.addTask = function(dayIdx) {
+        const input = document.getElementById(`input-${dayIdx}`);
+        const cat   = document.getElementById(`cat-${dayIdx}`).value;
+        const prio  = document.getElementById(`prio-${dayIdx}`).value;
+        const rec   = tempRecurringFlags[dayIdx]; 
+
+        if(!input.value.trim()) return;
+        
+        db[currentMonth][currentWeek][dayIdx].push({ 
+          name: input.value.trim(), 
+          cat: cat, 
+          done: false, 
+          priority: prio,
+          recurring: rec
+        });
+        
+        input.value = "";
+        createUI();
+        saveData();
+        updateProfessionalDashboard(); // Atualiza painel lateral se aberto
+      };
+
+      window.toggleTask = function(dIdx, tIdx) {
+        db[currentMonth][currentWeek][dIdx][tIdx].done = !db[currentMonth][currentWeek][dIdx][tIdx].done;
+        createUI(); 
+        saveData();
+        updateProfessionalDashboard();
+      };
+
+      window.editTask = function(dIdx, tIdx, val) {
+        if(val.trim()) {
+          db[currentMonth][currentWeek][dIdx][tIdx].name = val.trim();
+          saveData();
+        }
+      };
+
+      window.changeTaskPriority = function(dIdx, tIdx, val) {
+        db[currentMonth][currentWeek][dIdx][tIdx].priority = val;
+        saveData();
+        createUI();
+      };
+      
+      window.toggleTaskRecurring = function(dIdx, tIdx) {
+        db[currentMonth][currentWeek][dIdx][tIdx].recurring = !db[currentMonth][currentWeek][dIdx][tIdx].recurring;
+        saveData();
+        createUI();
+      };
+
+      window.deleteTask = function(dIdx, tIdx) {
+        db[currentMonth][currentWeek][dIdx].splice(tIdx, 1);
+        createUI();
+        saveData();
+        updateProfessionalDashboard();
+      };
+
+      // ==========================================================================
+      // UI E RENDERIZAÇÃO
+      // ==========================================================================
+      function buildProgressBar(tasks) {
+        const total = tasks.length;
+        const done  = tasks.filter(t => t.done).length;
+        if (total === 0) return '';
+        const pct    = Math.round((done / total) * 100);
+        const isDone = pct === 100;
+        return `
+          <div class="progress-wrap">
+            <div class="progress-header">
+              <span>${done} de ${total} tarefa${total > 1 ? 's' : ''} concluída${done !== 1 ? 's' : ''}</span>
+              <span class="pct-label">${pct}%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill ${isDone ? 'done' : ''}" style="width:${pct}%"></div>
+            </div>
+          </div>`;
+      }
+
+      function priorityBadge(p) {
+        const map = { alta: '🔴 Alta', media: '🟡 Média', baixa: '🟢 Baixa' };
+        const cls = { alta: 'priority-alta', media: 'priority-media', baixa: 'priority-baixa' };
+        return `<span class="priority-badge ${cls[p] || 'priority-baixa'}">${map[p] || '🟢 Baixa'}</span>`;
+      }
+
+      function initCharts() {
+        const ctxLine = document.getElementById('chart').getContext('2d');
+        lineChartInstance = new Chart(ctxLine, {
+          type: 'line',
+          data: {
+            labels: daysLabel,
+            datasets: [{ label: 'Concluídas', data: [0,0,0,0,0,0,0], borderColor: '#4f9cf7', backgroundColor: 'rgba(79,156,247,0.1)', fill: true, tension: 0.4 }]
+          },
+          options: { responsive: true, scales: { y: { beginAtZero: true, display: false }, x: { ticks: { color: '#c3d6ff' } } } }
+        });
+
+        const ctxDoughnut = document.getElementById('pro-doughnut-chart').getContext('2d');
+        doughnutChartInstance = new Chart(ctxDoughnut, {
+          type: 'doughnut',
+          data: {
+            labels: ['Concluídas', 'Pendentes'],
+            datasets: [{ data: [0, 1], backgroundColor: ['#1f8b4c', '#ff5e5e'], borderWidth: 0 }]
+          },
+          options: {
+            responsive: true, cutout: '75%', plugins: { legend: { labels: { color: '#c3d6ff' } } }
+          }
+        });
+      }
+
+      function updateStats() {
+        if(lineChartInstance) {
+          lineChartInstance.data.datasets[0].data = db[currentMonth][currentWeek].map(day => day.filter(t => t.done).length);
+          lineChartInstance.update();
+        }
+      }
+
+      function createUI() {
+        const app = document.getElementById('app');
+        app.innerHTML = '';
+        document.getElementById('current-week-label').textContent = `${months[currentMonth]} • Semana ${currentWeek + 1}`;
+        
+        const catFilter = document.getElementById('filterCategory').value;
+
+        db[currentMonth][currentWeek].forEach((tasks, i) => {
+          const firstDay = new Date(2026, currentMonth, 1).getDay();
+          const target   = new Date(2026, currentMonth, 1);
+          target.setDate(target.getDate() + ((currentWeek * 7) + i - firstDay));
+          
+          const visibleTasks = catFilter === "all" ? tasks : tasks.filter(t => t.cat === catFilter);
+
+          const div = document.createElement('div');
+          div.className = 'day';
+          div.innerHTML = `
+            <h3><i class="far fa-calendar-alt"></i> ${daysLabel[i]} 
+              <span class="day-date">${target.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'})}</span>
+            </h3>
+
+            ${buildProgressBar(visibleTasks)}
+
+            <div class="timer-control">
+               <span>🔋 Descanso:</span>
+               <button class="btn-timer" onclick="startRestTimer(${i}, 5)">5m</button>
+               <button class="btn-timer" onclick="startRestTimer(${i}, 10)">10m</button>
+               <button class="btn-timer" onclick="startRestTimer(${i}, 15)">15m</button>
+               <span class="timer-display" id="timer-val-${i}">00:00</span>
+               <button class="btn-reset" onclick="resetRestTimer(${i})" title="Resetar Timer"><i class="fas fa-undo"></i></button>
+            </div>
+
+            <div class="task-list"></div>
+
+            <div class="add-task-area">
+              <input type="text" placeholder="Adicionar tarefa..." id="input-${i}">
+              <select id="cat-${i}" class="select-custom" style="padding: 5px 10px;">
+                ${categories.map(c => `<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`).join('')}
+              </select>
+              <select id="prio-${i}" class="priority-select">
+                <option value="baixa">🟢 Baixa</option>
+                <option value="media">🟡 Média</option>
+                <option value="alta">🔴 Alta</option>
+              </select>
+              <button id="btn-rec-${i}" class="btn-recurring ${tempRecurringFlags[i] ? 'active' : ''}" onclick="toggleRecurringFlag(${i})" title="Repetir semanalmente">
+                <i class="fas fa-redo"></i>
+              </button>
+              <button class="btn-primary" onclick="addTask(${i})"><i class="fas fa-plus"></i></button>
+            </div>`;
+          
+          const list = div.querySelector('.task-list');
+
+          // Ordenação por prioridade
+          const prioOrder = { alta: 0, media: 1, baixa: 2 };
+          const sorted = tasks
+            .map((t, idx) => ({ ...t, _origIdx: idx }))
+            .filter(t => catFilter === "all" || t.cat === catFilter)
+            .sort((a, b) => (prioOrder[a.priority] ?? 2) - (prioOrder[b.priority] ?? 2));
+
+          sorted.forEach((t) => {
+            const tIdx = t._origIdx;
+            const row = document.createElement('div');
+            row.className = 'task';
+            row.innerHTML = `
+              <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask(${i}, ${tIdx})">
+              <input type="text" class="${t.done ? 'done-text' : ''}" value="${escapeHTML(t.name)}" onchange="editTask(${i}, ${tIdx}, this.value)">
+              
+              <button class="btn-recurring ${t.recurring ? 'active' : ''}" style="width:24px; height:24px; font-size:0.6rem; border:none;" onclick="toggleTaskRecurring(${i}, ${tIdx})" title="Tarefa Semanal">
+                <i class="fas fa-redo"></i>
+              </button>
+
+<button class="btn-timer" style="padding: 2px 6px; font-size: 0.65rem; background: rgba(106, 175, 232, 0.1);" 
+        onclick="replicateTaskToWeek(${i}, ${tIdx})" 
+        title="Aplicar esta rotina na semana toda">
+  <i class="fas fa-magic"></i>
+</button>
+
+              ${priorityBadge(t.priority)}
+              <select class="priority-select" style="margin-left:4px;" onchange="changeTaskPriority(${i}, ${tIdx}, this.value)">
+                <option value="baixa" ${(t.priority||'baixa')==='baixa' ? 'selected' : ''}>🟢</option>
+                <option value="media" ${t.priority==='media' ? 'selected' : ''}>🟡</option>
+                <option value="alta"  ${t.priority==='alta'  ? 'selected' : ''}>🔴</option>
+              </select>
+              <small style="color: #4f9cf7; font-size: 0.7rem; margin-left: 5px;">${escapeHTML(t.cat)}</small>
+              <button class="btn-delete-task" onclick="deleteTask(${i}, ${tIdx})" title="Excluir tarefa">
+                <i class="fas fa-trash-alt"></i>
+              </button>`;
+            list.appendChild(row);
+          });
+
+          app.appendChild(div);
+        });
+        updateStats();
+      }
+
+      // ==========================================================================
+      // AGENDA (ATUALIZADO COM TEXTAREA E DELETE)
+      // ==========================================================================
+      window.addAgendaItem = () => { 
+        agendaItems.push({ id: Date.now(), text: '', time: '', notified: false }); 
+        renderAgenda(); 
+        saveData();
+      };
+
+      window.updateAgenda = (id, f, v) => { 
+        const it = agendaItems.find(a => a.id === id); 
+        if(it) { 
+          it[f] = v;
+          if(f === 'time') it.notified = false; // reseta notificação se mudar hora
+          saveData(); 
+        }
+      };
+
+      window.deleteAgendaItem = (id) => {
+        agendaItems = agendaItems.filter(a => a.id !== id);
+        renderAgenda();
+        saveData();
+      };
+
+      function renderAgenda() {
+        const c = document.getElementById('agenda-container');
+        c.innerHTML = '';
+        agendaItems.forEach(item => {
+          const d = document.createElement('div');
+          d.className = 'agenda-item';
+          d.innerHTML = `
+            <div class="agenda-item-header">
+              <small style="color:#6aafe8;"><i class="fas fa-thumbtack"></i> Lembrete</small>
+              <button class="btn-delete-task" onclick="deleteAgendaItem(${item.id})"><i class="fas fa-times"></i></button>
+            </div>
+            <textarea onchange="updateAgenda(${item.id},'text',this.value)" placeholder="Descreva os detalhes do compromisso...">${escapeHTML(item.text)}</textarea>
+            <input type="time" value="${item.time}" onchange="updateAgenda(${item.id},'time',this.value)">`;
+          c.appendChild(d);
+        });
+      }
+
+      function checkReminders(now) {
+        const cur = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        agendaItems.forEach(it => {
+          // Dispara se o horário bater, se houver texto, e não foi notificado hoje
+          if(it.time === cur && !it.notified && it.text.trim() !== '') { 
+            showNotification(`Agenda: ${it.text}`);
+            it.notified = true; 
+            saveData();
+          }
+        });
+      }
+
+      // ==========================================================================
+      // DASHBOARD PROFISSIONAL (LATERAL)
+      // ==========================================================================
+      window.toggleDashboard = function() {
+        const dash = document.getElementById('pro-dashboard');
+        dash.classList.toggle('open');
+        if (dash.classList.contains('open')) {
+          updateProfessionalDashboard();
+        }
+      };
+
+      function updateProfessionalDashboard() {
+        let total = 0;
+        let done = 0;
+        
+        // Varre todo o BD (todos meses, semanas e dias)
+        for (let m in db) {
+          for (let w in db[m]) {
+            for (let d = 0; d < 7; d++) {
+              if (db[m][w][d]) {
+                const tasks = db[m][w][d];
+                total += tasks.length;
+                done += tasks.filter(t => t.done).length;
+              }
+            }
+          }
+        }
+
+        const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+        const pend = total - done;
+
+        document.getElementById('stat-total').textContent = total;
+        document.getElementById('stat-done').textContent = done;
+        document.getElementById('stat-pct').textContent = pct + '%';
+
+        if(doughnutChartInstance) {
+          doughnutChartInstance.data.datasets[0].data = [done, pend > 0 ? pend : (total === 0 ? 1 : 0)];
+          doughnutChartInstance.update();
+        }
+      }
+
+      // ==========================================================================
+      // INICIALIZAÇÃO
+      // ==========================================================================
+            document.getElementById('filterMonth').onchange = (e) => { 
+        currentMonth = parseInt(e.target.value); 
+        currentWeek = 0; 
+        initDB(currentMonth); 
+        applyRecurringTasks(currentMonth, currentWeek); // Garante que puxará ao trocar pelo filtro
+        createUI(); 
+        saveData();
+      };
+
+
+      document.getElementById('filterCategory').onchange = () => { createUI(); };
+
+      setInterval(() => {
+        const now = new Date();
+        document.getElementById('real-time').textContent = 
+          now.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' }) + 
+          ' • ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        checkReminders(now);
+        
+        // Reseta os lembretes à meia noite
+        if (now.getHours() === 0 && now.getMinutes() === 0 && now.getSeconds() === 0) {
+          agendaItems.forEach(it => it.notified = false);
+          saveData();
+        }
+      }, 1000);
+
+      const filterMonth = document.getElementById('filterMonth');
+      months.forEach((m, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = m;
+        filterMonth.appendChild(opt);
+      });
+
+      // Fluxo Inicial
+      loadData();
+      initDB(currentMonth);
+      applyRecurringTasks(currentMonth, currentWeek); // Puxa recorrência ao abrir o app
+      filterMonth.value = currentMonth;
+      
+      initCharts();
+      renderCategorySelectors();
+      renderAgenda();
+      applyFocusMode();
+      createUI();
+      checkNotificationUI();
+ // Mostra botão de permissão se necessário
+
+    })();
+  </script>
+</body>
+</html>
